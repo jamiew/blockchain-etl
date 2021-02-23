@@ -93,9 +93,10 @@ collect_rewards(blockchain_txn_rewards_v2, Chain, Txn, RewardMap) ->
         Chain
     ),
     maps:fold(
-        fun(overages, _Amount, Acc) ->
+        fun
+            (overages, _Amount, Acc) ->
                 Acc;
-           (_RewardCategory, Rewards, Acc) ->
+            (_RewardCategory, Rewards, Acc) ->
                 collect_v2_rewards(Rewards, Ledger, Acc)
         end,
         RewardMap,
@@ -119,6 +120,18 @@ collect_v2_rewards(Rewards, Ledger, RewardMap) ->
                     {ok, GwOwner} ->
                         maps:update_with(
                             {GwOwner, G},
+                            fun(Balance) -> Balance + Amt end,
+                            Amt,
+                            Acc
+                        )
+                end;
+            ({validator, _Type, V}, Amt, Acc) ->
+                case blockchain_ledger_v1:get_validator(V, Ledger) of
+                    {error, _Error} ->
+                        Acc;
+                    {ok, Validator} ->
+                        maps:update_with(
+                            {blockchain_ledger_validator_v1:owner_address(Validator), V},
                             fun(Balance) -> Balance + Amt end,
                             Amt,
                             Acc
